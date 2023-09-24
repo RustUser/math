@@ -1,7 +1,10 @@
-use std::ops::Div;
+use std::ops::{Div, Mul};
+
 use crate::angle::Angle;
 use crate::euler_angles::EulerAngles;
-use crate::functions::{cos, sin, vec3};
+use crate::functions::{atan2, cos, sin, sqrt, vec3};
+use crate::matrix::mat3::Mat3;
+use crate::matrix::Matrix;
 use crate::scalar::Scalar;
 use crate::vector::Vector3;
 
@@ -76,14 +79,32 @@ impl<S: Scalar> Quaternion<S> {
         &self.w
     }
 
-    pub fn x(&self) -> &S {
-        &self.xyz.0[0]
-    }
+    pub fn x(&self) -> &S { &self.xyz.0[0] }
     pub fn y(&self) -> &S {
         &self.xyz.0[1]
     }
     pub fn z(&self) -> &S {
         &self.xyz.0[2]
+    }
+
+    pub fn w_xyz(&self) -> (S, S, S, S) {
+        (self.w, *self.x(), *self.y(), *self.z())
+    }
+
+    pub fn rotation_matrix(self) -> Mat3<S> {
+        self.into()
+    }
+}
+
+impl<S: Scalar> Into<Mat3<S>> for Quaternion<S> {
+    fn into(self) -> Mat3<S> {
+        let (w, x, y, z) = self.w_xyz();
+        let (one, two): (S, S) = (S::ONE, S::from_f32(2.0));
+        Matrix([
+                   [one - two * y * y - two * z * z, two * x * y - two * w * z, two * x * z + two * w * y],
+                   [two * x * y + two * w * z, one - two * x * x - two * z * z, two * y * z - two * w * x],
+                   [two * x * z - two * w * y, two * y * z + two * w * x, one - two * x * x - two * y * y],
+               ], 4)
     }
 }
 
@@ -137,31 +158,36 @@ impl<S: Scalar> Into<EulerAngles<S>> for Quaternion<S> {
         let q_y = *self.y();
         let q_z = *self.z();
 
-        println!("{:?}", [q_w, q_x, q_y, q_z]);
-
         let sinr_cosp = two * (
             q_w * q_x + q_y * q_z
         );
         let cosr_cosp = one - two * (q_x * q_x + q_y * q_y);
 
-
-        let sin_p = (one + two * (q_w * q_y - q_x * q_z)).square_root();
-        let cos_p = (one - two * (q_w * q_y - q_x * q_z)).square_root();
+        let sin_p = sqrt(one + two * (q_w * q_y - q_x * q_z));
+        let cos_p = sqrt(one - two * (q_w * q_y - q_x * q_z));
 
         let sin_y_cosp = two * (q_w * q_z + q_x * q_y);
         let cos_y_cosp = one - two * (q_y * q_y + q_z * q_z);
 
         EulerAngles {
             roll: Angle::rad(
-                sinr_cosp.inv_tangent2(cosr_cosp)
+                atan2(sinr_cosp, cosr_cosp)
             ),
             pitch: Angle::rad(
-                two * sin_p.inv_tangent2(cos_p) - pi / two
+                two * atan2(sin_p, cos_p) - pi / two
             ),
             yaw: Angle::rad(
-                sin_y_cosp.inv_tangent2(cos_y_cosp)
+                atan2(sin_y_cosp, cos_y_cosp)
             ),
         }
+    }
+}
+
+impl<S: Scalar> Mul<Self> for Quaternion<S> {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        crate::functions::quat_mul_quat(self, rhs)
     }
 }
 

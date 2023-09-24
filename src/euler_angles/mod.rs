@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+
 use crate::angle::Angle;
 use crate::scalar::Scalar;
 
@@ -30,5 +31,15 @@ impl<S: Scalar> EulerAngles<S> {
 impl <S: Scalar> Display for EulerAngles<S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("[{} {} {}]", self.roll, self.pitch, self.yaw))
+    }
+}
+
+impl<S: Scalar> Default for EulerAngles<S> {
+    fn default() -> Self {
+        Self {
+            roll: Angle::default(),
+            pitch: Angle::default(),
+            yaw: Angle::default(),
+        }
     }
 }

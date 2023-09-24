@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Display};
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+
 use crate::angle::Angle;
 
 crate::scalar!(f32, f64);
@@ -14,6 +15,7 @@ Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> +
 AddAssign + SubAssign + MulAssign + DivAssign {
     const ZERO: Self;
     const ONE: Self;
+    const NEG_ONE: Self;
 
     const PI: Self;
 
@@ -30,9 +32,23 @@ AddAssign + SubAssign + MulAssign + DivAssign {
     fn cosine(self) -> Self;
     fn tangent(self) -> Self;
 
+    fn sine_cosine(&self) -> (Self, Self) {
+        (self.sine(), self.cosine())
+    }
+
+    fn sine_cosine_tangent(&self) -> (Self, Self, Self) {
+        (self.sine(), self.cosine(), self.tangent())
+    }
+
+    fn zero_one() -> (Self, Self) {
+        (Self::ZERO, Self::ONE)
+    }
+
     fn inv_tangent2(self, b: Self) -> Self;
 
     fn from_f32(f: f32) -> Self;
+
+    fn format_places(&self, places: usize) -> String;
 }
 
 #[macro_export]
@@ -42,6 +58,7 @@ macro_rules! scalar {
             impl Scalar for $s {
                 const ZERO: Self = 0.0_f64 as Self;
                 const ONE: Self = 1.0_f64 as Self;
+                const NEG_ONE: Self = -1.0_f64 as Self;
                 const PI: Self = std::f64::consts::PI as Self;
 
                 fn rad(self) -> Self {
@@ -79,6 +96,10 @@ macro_rules! scalar {
 
                 fn from_f32(f: f32) -> Self {
                     f as Self
+                }
+
+                fn format_places(&self, places: usize) -> String {
+                    format!("{0:.1$}", self, places)
                 }
             }
         )*
